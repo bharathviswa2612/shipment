@@ -2,10 +2,12 @@ package com.ups.shipment.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.UUID;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
 @Entity
+@Table(name = "shipments")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,30 +15,33 @@ import java.time.LocalDateTime;
 public class Shipment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID shipmentId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long shipmentId;
 
     @Column(nullable = false)
     private String orderId;
 
-    @Column(nullable = false)
     private String sourceAddress;
 
-    @Column(nullable = false)
     private String destinationAddress;
 
-    @Column(nullable = false)
     private BigDecimal weight;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ShipmentStatus status;
 
-    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
+        this.status = ShipmentStatus.CREATED;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

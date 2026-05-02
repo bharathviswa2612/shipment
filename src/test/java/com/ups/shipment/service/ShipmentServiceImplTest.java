@@ -3,8 +3,11 @@ package com.ups.shipment.service;
 
 import com.ups.shipment.dto.ShipmentRequest;
 import com.ups.shipment.dto.ShipmentResponse;
+import com.ups.shipment.dto.UpdateStatusResponse;
 import com.ups.shipment.entity.Shipment;
 import com.ups.shipment.entity.ShipmentStatus;
+import com.ups.shipment.exceptionhandling.InvalidStatusTransitionException;
+import com.ups.shipment.exceptionhandling.ShipmentNotFoundException;
 import com.ups.shipment.repository.ShipmentRepository;
 
 import org.junit.jupiter.api.Test;
@@ -17,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,7 +38,7 @@ class ShipmentServiceImplTest {
     @Test
     void createShipment_shouldCreateAndReturnShipmentResponse_whenValidRequest() {
         // Arrange
-        UUID shipmentId = UUID.randomUUID();
+        Long shipmentId = 6875676L;
 
         ShipmentRequest request = ShipmentRequest.builder()
                 .orderId("ORD123")
@@ -80,4 +84,56 @@ class ShipmentServiceImplTest {
         assertEquals(request.getWeight(), captured.getWeight());
         assertEquals(ShipmentStatus.CREATED, captured.getStatus());
     }
+    @Test
+    void updateStatus_successfulTransition() {
+        Shipment shipment = Shipment.builder()
+                .shipmentId(1L)
+                .status(ShipmentStatus.CREATED)
+                .build();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(shipmentRepository.save(any(Shipment.class))).thenReturn(shipment);
+
+        UpdateStatusResponse response = shipmentService.updateStatus(1L, ShipmentStatus.PICKED);
+
+        assertEquals(ShipmentStatus.PICKED, response.getStatus());
+        assertEquals(1L, response.getShipmentId());
+        assertNotNull(response.getUpdatedAt());
+        assertEquals("Shipment status updated successfully", response.getMessage());
+    }
+
+    @Test
+    void updateStatus_shipmentNotFound() {
+        when(shipmentRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ShipmentNotFoundException.class,
+                () -> shipmentService.updateStatus(99L, ShipmentStatus.PICKED));
+    }
+
+    @Test
+    void updateStatus_invalidTransition() {
+        Shipment shipment = Shipment.builder()
+                .shipmentId(1L)
+                .status(ShipmentStatus.DELIVERED)
+                .build();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+
+        assertThrows(InvalidStatusTransitionException.class,
+                () -> shipmentService.updateStatus(1L, ShipmentStatus.IN_TRANSIT));
+    }
+
+    @Test
+    void updateStatus_sameStatusConflict() {
+        Shipment shipment = Shipment.builder()
+                .shipmentId(1L)
+                .status(ShipmentStatus.IN_TRANSIT)
+                .build();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+
+        assertThrows(InvalidStatusTransitionException.class,
+                () -> shipmentService.updateStatus(1L, ShipmentStatus.IN_TRANSIT));
+    }
+
 }

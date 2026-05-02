@@ -1,7 +1,6 @@
 package com.ups.shipment.dto;
 
 import com.ups.shipment.entity.ShipmentStatus;
-import jakarta.validation.constraints.*;
 
 import lombok.*;
 
@@ -15,7 +14,7 @@ import java.util.UUID;
 @Builder
 public class ShipmentResponse {
 
-    private UUID shipmentId;
+    private Long shipmentId;
     private String orderId;
     private String sourceAddress;
     private String destinationAddress;
