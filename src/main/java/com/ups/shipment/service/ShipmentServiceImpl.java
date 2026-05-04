@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +40,32 @@ public class ShipmentServiceImpl implements ShipmentService {
         log.info("Shipment created with id: {}", saved.getShipmentId());
 
         return mapToResponse(saved);
+    }
+    public ShipmentResponse getShipmentById(UUID shipmentId) {
+        log.info("Fetching shipment with ID: {}", shipmentId);
+
+        Shipment shipment = shipmentRepository.findByShipmentId(shipmentId)
+                .orElseThrow(() -> {
+                    log.error("Shipment not found for ID: {}", shipmentId);
+                    return new ShipmentNotFoundException("Shipment not found");
+                });
+
+        log.debug("Shipment details retrieved: orderId={}, status={}, createdAt={}",
+                shipment.getOrderId(), shipment.getStatus(), shipment.getCreatedAt());
+
+        ShipmentResponse response = ShipmentResponse.builder()
+                .shipmentId(shipment.getShipmentId())
+                .orderId(shipment.getOrderId())
+                .sourceAddress(shipment.getSourceAddress())
+                .destinationAddress(shipment.getDestinationAddress())
+                .weight(shipment.getWeight())
+                .status(shipment.getStatus())
+                .createdAt(shipment.getCreatedAt())
+                .updatedAt(shipment.getUpdatedAt())
+                .build();
+
+        log.info("Returning shipment response for ID: {}", shipmentId);
+        return response;
     }
 
     private Shipment mapToEntity(ShipmentRequest request) {
@@ -65,8 +92,8 @@ public class ShipmentServiceImpl implements ShipmentService {
     }
 
     @Override
-    public UpdateStatusResponse updateStatus(Long shipmentId, ShipmentStatus newStatus) {
-        Shipment shipment = shipmentRepository.findById(shipmentId)
+    public UpdateStatusResponse updateStatus(UUID shipmentId, ShipmentStatus newStatus) {
+        Shipment shipment = shipmentRepository.findByShipmentId(shipmentId)
                 .orElseThrow(() -> new ShipmentNotFoundException("Shipment not found with id " + shipmentId));
 
         ShipmentStatus currentStatus = shipment.getStatus();
@@ -90,7 +117,7 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         return UpdateStatusResponse.builder()
                 .shipmentId(shipment.getShipmentId())
-                .status(newStatus)
+                .status(shipment.getStatus())
                 .updatedAt(shipment.getUpdatedAt())
                 .message("Shipment status updated successfully")
                 .build();

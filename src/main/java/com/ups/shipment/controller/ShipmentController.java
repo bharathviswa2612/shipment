@@ -9,15 +9,30 @@ import com.ups.shipment.service.ShipmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/shipments")
 @RequiredArgsConstructor
 public class ShipmentController {
 
     private final ShipmentService shipmentService;
+
+    @GetMapping("/{shipmentId}")
+    public ResponseEntity<ShipmentResponse> getShipment(@PathVariable String shipmentId) {
+        log.info("Received request to fetch shipment with ID: {}", shipmentId);
+
+        // Let global exception handler manage invalid UUID or not found cases
+        UUID uuid = UUID.fromString(shipmentId);
+        ShipmentResponse response = shipmentService.getShipmentById(uuid);
+
+        log.info("Successfully fetched shipment with ID: {}", shipmentId);
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping
     public ResponseEntity<ShipmentResponse> createShipment(@Valid @RequestBody ShipmentRequest request) {
@@ -28,7 +43,7 @@ public class ShipmentController {
     }
     @PatchMapping("/{shipmentId}/status")
     public ResponseEntity<UpdateStatusResponse> updateShipmentStatus(
-            @PathVariable Long shipmentId,
+            @PathVariable UUID shipmentId,
             @Valid @RequestBody UpdateStatusRequest request) {
 
         UpdateStatusResponse response = shipmentService.updateStatus(shipmentId, request.getStatus());
