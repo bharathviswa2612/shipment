@@ -6,7 +6,10 @@ import com.ups.shipment.dto.UpdateStatusResponse;
 import com.ups.shipment.entity.ShipmentStatus;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.UUID;
+
 public interface ShipmentService {
     ShipmentResponse createShipment(ShipmentRequest request);
-    UpdateStatusResponse updateStatus(Long shipmentId, @NotNull ShipmentStatus status);
+    UpdateStatusResponse updateStatus(UUID shipmentId, @NotNull ShipmentStatus status);
+    ShipmentResponse getShipmentById(UUID uuid);
 }

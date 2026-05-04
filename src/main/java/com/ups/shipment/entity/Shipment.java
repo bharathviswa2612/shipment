@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "shipments")
@@ -15,8 +16,8 @@ import java.time.LocalDateTime;
 public class Shipment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long shipmentId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID shipmentId;
 
     @Column(nullable = false)
     private String orderId;
@@ -38,6 +39,7 @@ public class Shipment {
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
         this.status = ShipmentStatus.CREATED;
+        this.updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate

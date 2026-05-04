@@ -14,11 +14,12 @@ import java.util.UUID;
 @Builder
 public class ShipmentResponse {
 
-    private Long shipmentId;
+    private UUID shipmentId;
     private String orderId;
     private String sourceAddress;
     private String destinationAddress;
     private BigDecimal weight;
     private ShipmentStatus status;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
