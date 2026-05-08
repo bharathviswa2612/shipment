@@ -38,7 +38,9 @@ public class Shipment {
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
-        this.status = ShipmentStatus.CREATED;
+        if (this.status == null) {
+            this.status = ShipmentStatus.CREATED;
+        }
         this.updatedAt = LocalDateTime.now();
     }
 

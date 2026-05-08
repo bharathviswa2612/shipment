@@ -23,4 +23,6 @@ public class ShipmentRequest {
     @NotNull
     @Positive
     private BigDecimal weight;
+
+
 }
