@@ -1,15 +1,15 @@
 
 package com.ups.shipment.service;
 
-import com.ups.shipment.dto.ShipmentRequest;
-import com.ups.shipment.dto.ShipmentResponse;
-import com.ups.shipment.dto.UpdateStatusResponse;
+import com.ups.shipment.dto.*;
 import com.ups.shipment.entity.Shipment;
 import com.ups.shipment.entity.ShipmentStatus;
 import com.ups.shipment.exceptionhandling.InvalidStatusTransitionException;
 import com.ups.shipment.exceptionhandling.ShipmentNotFoundException;
 import com.ups.shipment.repository.ShipmentRepository;
 
+import com.ups.shipment.repository.projection.ShipmentAggregateProjection;
+import com.ups.shipment.repository.projection.ShipmentSummaryProjection;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,9 +18,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -122,7 +125,7 @@ class ShipmentServiceImplTest {
                 .status(ShipmentStatus.DELIVERED)
                 .build();
 
-        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(shipmentRepository.findById(shipmentId)).thenReturn(Optional.of(shipment));
 
         assertThrows(InvalidStatusTransitionException.class,
                 () -> shipmentService.updateStatus(shipmentId, ShipmentStatus.IN_TRANSIT));
@@ -186,6 +189,78 @@ class ShipmentServiceImplTest {
         verify(shipmentRepository, times(1)).findByShipmentId(shipmentId);
     }
 
+    // Helper projection stub
+    private ShipmentSummaryProjection mockProjection(UUID id, ShipmentStatus status, BigDecimal weight) {
+        return new ShipmentSummaryProjection() {
+            @Override public UUID getShipmentId() { return id; }
+            @Override public ShipmentStatus getStatus() { return status; }
+            @Override public BigDecimal getWeight() { return weight; }
+        };
+    }
+
+    private ShipmentAggregateProjection mockAggregate(long delivered, long inTransit, long failed) {
+        return new ShipmentAggregateProjection() {
+            @Override public Long getTotal() { return delivered + inTransit + failed; }
+            @Override public Long getDeliveredCount() { return delivered; }
+            @Override public Long getInTransitCount() { return inTransit; }
+            @Override public Long getFailedCount() { return failed; }
+        };
+    }
+
+    @Test
+    void testValidSummaryRequest() {
+        // Arrange
+        UUID id = UUID.randomUUID();
+        ShipmentSummaryRequest request = ShipmentSummaryRequest.builder()
+                .status("DELIVERED")
+                .page(0)
+                .size(10)
+                .build();
+
+        Page<ShipmentSummaryProjection> page = new PageImpl<>(
+                List.of(mockProjection(id, ShipmentStatus.DELIVERED, BigDecimal.valueOf(12.5)))
+        );
+
+        when(shipmentRepository.findShipmentSummaries(eq(ShipmentStatus.DELIVERED), any(), any(), any()))
+                .thenReturn(page);
+        when(shipmentRepository.getShipmentAggregates(eq(ShipmentStatus.DELIVERED), any(), any()))
+                .thenReturn(mockAggregate(1, 0, 0));
+
+        // Act
+        ShipmentSummaryResponse response = shipmentService.getShipmentSummary(request);
+
+        // Assert
+        assertEquals(1, response.getDeliveredCount());
+        assertEquals(0, response.getInTransitCount());
+        assertEquals(0, response.getFailedCount());
+        assertEquals(1, response.getTotalElements());
+        assertEquals("DELIVERED", response.getData().get(0).getStatus().toString());
+    }
+
+    @Test
+    void testInvalidWeightRangeThrowsException() {
+        ShipmentSummaryRequest request = ShipmentSummaryRequest.builder()
+                .minWeight(BigDecimal.valueOf(20))
+                .maxWeight(BigDecimal.valueOf(10))
+                .page(0)
+                .size(10)
+                .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> shipmentService.getShipmentSummary(request));
+    }
+
+    @Test
+    void testInvalidStatusThrowsException() {
+        ShipmentSummaryRequest request = ShipmentSummaryRequest.builder()
+                .status("UNKNOWN")
+                .page(0)
+                .size(10)
+                .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> shipmentService.getShipmentSummary(request));
+    }
 
 
 
