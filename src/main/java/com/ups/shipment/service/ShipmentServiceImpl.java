@@ -6,6 +6,8 @@ import com.ups.shipment.entity.ShipmentStatus;
 import com.ups.shipment.exceptionhandling.DuplicateOrderIdException;
 import com.ups.shipment.exceptionhandling.InvalidStatusTransitionException;
 import com.ups.shipment.exceptionhandling.ShipmentNotFoundException;
+import com.ups.shipment.kafka.event.ShipmentEvent;
+import com.ups.shipment.kafka.producer.ShipmentEventProducer;
 import com.ups.shipment.repository.ShipmentRepository;
 
 import com.ups.shipment.repository.projection.ShipmentAggregateProjection;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 public class ShipmentServiceImpl implements ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
+    private final ShipmentEventProducer shipmentEventProducer;
 
     @Override
     @Transactional
@@ -55,8 +58,12 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         log.info("Shipment created with id: {}", saved.getShipmentId());
 
+
+
         return mapToResponse(saved);
     }
+
+
     public ShipmentResponse getShipmentById(UUID shipmentId) {
         log.info("Fetching shipment with ID: {}", shipmentId);
 
@@ -125,11 +132,24 @@ public class ShipmentServiceImpl implements ShipmentService {
                     "Invalid status transition from " + currentStatus + " to " + newStatus);
         }
 
+
         // Update status and timestamp
         shipment.setStatus(newStatus);
         shipment.setUpdatedAt(LocalDateTime.now());
 
         shipmentRepository.save(shipment);
+
+
+
+        ShipmentEvent event = ShipmentEvent.builder()
+                .eventId(UUID.randomUUID())
+                .shipmentId(shipment.getShipmentId())
+                .status(shipment.getStatus())
+                .timestamp(LocalDateTime.now())
+                .source("shipment-service")
+                .build();
+
+        shipmentEventProducer.publishShipmentEvent(event);
 
         return UpdateStatusResponse.builder()
                 .shipmentId(shipment.getShipmentId())

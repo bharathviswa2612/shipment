@@ -35,6 +35,9 @@ public class Shipment {
 
     private LocalDateTime updatedAt;
 
+    @Version
+    private Long version;
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
