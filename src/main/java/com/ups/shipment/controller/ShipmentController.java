@@ -55,15 +55,6 @@ public class ShipmentController {
         return ResponseEntity.ok(response);
     }
 
-
-
-
-
-
-
-
-
-
     @PatchMapping("/{shipmentId}/status")
     public ResponseEntity<UpdateStatusResponse> updateShipmentStatus(
             @PathVariable UUID shipmentId,
@@ -72,6 +63,7 @@ public class ShipmentController {
         UpdateStatusResponse response = shipmentService.updateStatus(shipmentId, request.getStatus());
         return ResponseEntity.ok(response);
     }
+
     @Operation(summary = "Get all products")
     @GetMapping("/summary")
     public ResponseEntity<ShipmentSummaryResponse> getShipmentSummary(
